@@ -5,7 +5,7 @@ from envs.robot_locomotors import HumanoidFlagrun, HumanoidFlagrunHarder, HalfCh
 from envs.scene_stadium import SinglePlayerStadiumScene
 
 
-class WalkerBaseBulletEnv(MJCFBaseBulletEnv):
+class  WalkerBaseBulletEnv(MJCFBaseBulletEnv):
 
   def __init__(self, robot, render=False):
     # print("WalkerBase::__init__ start")
@@ -62,16 +62,35 @@ class WalkerBaseBulletEnv(MJCFBaseBulletEnv):
   joints_at_limit_cost = -0.1  # discourage stuck joints
 
   def step(self, a):
-    if not self.scene.multiplayer:  # if multiplayer, action first applied to all robots, then global step() called, then _step() for all robots with the same actions
-      self.robot.apply_action(a)
-      self.scene.global_step()
+    kp = 200
+    kd = 100
+    
+    j = np.array([j.current_relative_position() for j in self.ordered_joints],
+                 dtype=np.float32).flatten()
+    # even elements [0::2] position, scaled to -1..+1 between limits
+    # odd elements  [1::2] angular speed, scaled to show -1..+1
+    angles = j[0::2]
+    speed = j[1::2]
+    print(f"{angles=}")
+    print(f"{speed=}")
+    # a is the target state
+    torque = kp*(a - angles) + kd*(0 - speed)  # based on a
+    # torque = np.clip(torque, -1, +1)
 
+    if not self.scene.multiplayer:  # if multiplayer, action first applied to all robots, then global step() called, then _step() for all robots with the same actions
+      # set torque for each motor corresponding to a
+      for i in range(1):
+        self.robot.apply_action(torque)
+        self.scene.global_step()
+        print(torque)
+    # state is obtained by calling self.robot.calc_state(), the method of another class. 
     state = self.robot.calc_state()  # also calculates self.joints_at_limit
 
     self._alive = float(
         self.robot.alive_bonus(
             state[0] + self.robot.initial_z,
             self.robot.body_rpy[1]))  # state[0] is body height above ground, body_rpy[1] is pitch
+
     done = self._isDone()
     if not np.isfinite(state).all():
       print("~INF~", state)
@@ -139,6 +158,7 @@ class HopperBulletEnv(WalkerBaseBulletEnv):
     WalkerBaseBulletEnv.__init__(self, self.robot, render)
 
 
+# Its parent class WalkerBaseBulletEnv does have a step method:
 class Walker2DBulletEnv(WalkerBaseBulletEnv):
 
   def __init__(self, render=False):
