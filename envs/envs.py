@@ -17,8 +17,8 @@ class WalkerBaseBulletEnv(MJCFBaseBulletEnv):
 
     def create_single_player_scene(self, bullet_client):
         self.stadium_scene = SinglePlayerStadiumScene(bullet_client,
-                                                      # gravity=9.8,
-                                                      gravity=0,
+                                                      gravity=9.8,
+                                                      # gravity=0,
                                                       timestep=0.0165 / 4,
                                                       frame_skip=4)
         return self.stadium_scene
@@ -80,8 +80,6 @@ class WalkerBaseBulletEnv(MJCFBaseBulletEnv):
         # target_angs[a > 0] = hi[a > 0] * a[a > 0]
         # target_angs[a < 0] = -lo[a < 0] * a[a < 0]
         torque = kp * (target_angs - angs) + kd * (0 - vels)
-        print(target_angs)
-        print(torque)
         if not self.scene.multiplayer:  # if multiplayer, action first applied to all robots, then global step() called, then _step() for all robots with the same actions
             self.robot.apply_action(torque)
             self.scene.global_step()

@@ -37,11 +37,17 @@ def main():
     # actions[:, 3] = 0
     # actions[:, 4] = 0
 
+    # TODO: find action_pieces such that sum_reward is large. Use something like CEM or CMA-ES.
+
+    sum_reward = 0
+    env.reset()
     for a in actions:
         # env.step(np.zeros(6))
-        env.step(a)
+        _, reward, _, _ = env.step(a)
+        sum_reward += reward
         env.render()
         time.sleep(0.066)
+    print(sum_reward)
 
     # import pybullet as p
     # import time
