@@ -12,22 +12,13 @@ warnings.filterwarnings("ignore", category=UserWarning)
 warnings.filterwarnings("ignore", category=DeprecationWarning) 
 
 import yaml
+import common.helper as h
 
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 
 # import mocca_envs
 from envs.envs import Walker2DBulletEnv
 
-def interpolation(keypoints, interval):
-
-    actions = []
-    # interpolate 
-    actions = [np.linspace(keypoints[index], keypoints[index + 1], interval)  for index in range(len(keypoints)) if index != len(keypoints)-1]
-    # concatenate
-    # actions size => [(num_keypoints-1) * interval] * action_dim
-    actions = np.concatenate(actions, axis=0)
-    
-    return actions
 
 class Agent():
     def __init__(self, env):
@@ -90,8 +81,10 @@ def cem(agent,
     best_sample_keypoints = np.array([np.random.uniform(lower_bound[i], upper_bound[i], num_keypoints) for i in range(action_dim)])
     best_sample_keypoints = np.dstack([i for i in best_sample_keypoints])[0]
     
-    # best action list reward
+    # create variable to store best reward and best action keypoints
     best_reward = 0
+    best_actions_keypoints = np.zeros_like(best_sample_keypoints)
+
     for i_iteration in range(1, n_iterations+1):
         # get the population
         # samples shape => pop_size * action_dim * num_keypoints
@@ -102,7 +95,7 @@ def cem(agent,
         population_keypoints = np.stack([best_sample_keypoints + sigma * np.dstack([i for i in sample_keypoint])[0] for sample_keypoint in population_keypoints])
         
         # interpolate and population shape => pop_size * [(num_keypoints-1) * interval)] * action_dim
-        population = np.stack([interpolation(keypoints, interval) for keypoints in population_keypoints])
+        population = np.stack([h.interpolation(keypoints, interval) for keypoints in population_keypoints])
         
         # evaluate population
         rewards = np.array([agent.evaluate(sample) for sample in population])
@@ -133,42 +126,14 @@ def cem(agent,
 
     return best_actions_keypoints, scores
 
-def save_file(filename, arr):
-    # open a binary file in write mode
-    file = open(filename, "wb")
-    # save array to the file
-    np.save(file, arr)
-    # close the file
-    file.close
-
-def load_file(filename):
-    # open the file in read binary mode
-    file = open(filename, "rb")
-    #read the file to numpy array
-    arr = np.load(file)
-    return arr
-
-def load_config(configFilePath):
-    with open(configFilePath, 'r') as file:
-        cfg = yaml.safe_load(file)
-    return cfg
-
-def make_dir(dir_path):
-    """Create directory if it does not already exist."""
-    try:
-        os.makedirs(dir_path)
-    except OSError:
-        pass
-    return dir_path
-
 def main():
     # get config file
-    config_file_path = currentdir + "\\cfg\\env_cfg.yaml"
-    cfg = load_config(config_file_path)
+    config_file_path = currentdir + "/cfg/env_cfg.yaml"
+    cfg = h.load_config(config_file_path)
     print(config_file_path)
     # set result config path
-    result_file_path = currentdir+"\\result"
-    make_dir(result_file_path) # create result folder
+    result_file_path = currentdir+"/result"
+    h.make_dir(result_file_path) # create result folder
 
     # initialize environment
     env = Walker2DBulletEnv(render=False)
@@ -183,7 +148,7 @@ def main():
     hi = np.array([j.upperLimit for j in env.ordered_joints], dtype=np.float32).flatten()
     lo = np.array([j.lowerLimit for j in env.ordered_joints], dtype=np.float32).flatten()
 
-    best_actions_keypoints, scores = cem(agent = agent, 
+    best_actions_keypoints, scores = cem(agent =agent, 
                         action_dim = action_dim, 
                         num_keypoints = cfg['num_keypoints'], 
                         upper_bound = hi, 
@@ -194,22 +159,13 @@ def main():
                         scores_deque_length = cfg['scores_deque_length'],
                         pop_size = cfg['pop_size'])
     # save file
-    save_file(result_file_path + "\\best_actions_keypoints", best_actions_keypoints)
-    save_file(result_file_path + "\\scores", scores)
+    h.save_file(result_file_path + "/best_actions_keypoints", best_actions_keypoints)
+    h.save_file(result_file_path + "/scores", scores)
 
-    plot(scores)
-
+    h.plot(scores)
+    env.close()
     return 0
 
-
-def plot(scores):
-    # plot the scores
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    plt.plot(np.arange(1, len(scores)+1), scores)
-    plt.ylabel('Score')
-    plt.xlabel('Episode #')
-    plt.show()
 
 
 def test():
@@ -217,9 +173,9 @@ def test():
     env.reset()
     # TODO: find action_pieces such that sum_reward is large. Use something like CEM or CMA-ES.
     # load best actions keypoints
-    best_actions_keypoints = load_file("best_actions_keypoints")
+    best_actions_keypoints = h.load_file("result/best_actions_keypoints")
     # get best action lists
-    best_actions = interpolation(best_actions_keypoints, interval=50)
+    best_actions = h.interpolation(best_actions_keypoints, interval=50)
 
     episode_return = 0.0
     for action in best_actions:
@@ -232,11 +188,12 @@ def test():
             break
 
     print("episode_return:", episode_return)
+    env.close()
         
 if __name__ == '__main__':
     main()
-    # print("Testing: \n")
-    # test()
+    print("Testing: \n")
+    test()
     
 
 
