@@ -201,9 +201,10 @@ def test():
 if __name__ == '__main__':
     main()
     
-    print("Testing: \n")
+    #print("Testing: \n")
     test()
 
     # save video
     show_video_of_model()
+    
 
