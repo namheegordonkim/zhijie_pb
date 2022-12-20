@@ -42,11 +42,12 @@ def interpolation(keypoints, interval):
     
     return actions
 
-def plot(scores):
+def plot(scores, path):
     # plot the scores
     fig = plt.figure()
     ax = fig.add_subplot(111)
     plt.plot(np.arange(1, len(scores)+1), scores)
     plt.ylabel('Score')
     plt.xlabel('Episode #')
-    plt.show()
+    plt.savefig(path + '/scores.png')
+    plt.close(fig)

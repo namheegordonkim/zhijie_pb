@@ -13,6 +13,7 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 import yaml
 import common.helper as h
+from record_animation import show_video_of_model
 
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 
@@ -71,9 +72,11 @@ def cem(agent,
         elite_frac (float): percentage of top performers to use in update
         sigma (float): standard deviation of additive noise
     """
+
     # set the number of elite
     n_elite=int(pop_size * elite_frac)
-    # scores deque
+    
+    # set variable store scores
     scores_deque = deque(maxlen=scores_deque_length)
     scores = []
 
@@ -81,7 +84,7 @@ def cem(agent,
     best_sample_keypoints = np.array([np.random.uniform(lower_bound[i], upper_bound[i], num_keypoints) for i in range(action_dim)])
     best_sample_keypoints = np.dstack([i for i in best_sample_keypoints])[0]
     
-    # create variable to store best reward and best action keypoints
+    # create variable to store best reward and best action keypoints as return
     best_reward = 0
     best_actions_keypoints = np.zeros_like(best_sample_keypoints)
 
@@ -107,12 +110,12 @@ def cem(agent,
         best_sample_keypoints = np.array(elite_samples_keypoints).mean(axis=0)
         best_sample = np.array(elite_samples).mean(axis=0)
 
-        # evluate the best sample which got according to mean method
+        # evluate the best sample which calc according to mean method
         reward = agent.evaluate(best_sample)
         scores_deque.append(reward)
         scores.append(reward)       
 
-        # got best action
+        # get best action
         if reward > best_reward:
             best_reward = reward
             best_actions_keypoints = best_sample_keypoints
@@ -124,13 +127,16 @@ def cem(agent,
             print('\nEnvironment solved in {:d} iterations!\tAverage Score: {:.2f}'.format(i_iteration-100, np.mean(scores_deque)))
             break
 
-    return best_actions_keypoints, scores
+    return best_actions_keypoints, best_reward, scores
+
+# get config file
+config_file_path = currentdir + "/cfg/env_cfg.yaml"
+cfg = h.load_config(config_file_path)
 
 def main():
-    # get config file
-    config_file_path = currentdir + "/cfg/env_cfg.yaml"
-    cfg = h.load_config(config_file_path)
-    print(config_file_path)
+    # running id
+    # run_id = int(time.time())
+
     # set result config path
     result_file_path = currentdir+"/result"
     h.make_dir(result_file_path) # create result folder
@@ -148,7 +154,7 @@ def main():
     hi = np.array([j.upperLimit for j in env.ordered_joints], dtype=np.float32).flatten()
     lo = np.array([j.lowerLimit for j in env.ordered_joints], dtype=np.float32).flatten()
 
-    best_actions_keypoints, scores = cem(agent =agent, 
+    best_actions_keypoints, best_reward, scores = cem(agent =agent, 
                         action_dim = action_dim, 
                         num_keypoints = cfg['num_keypoints'], 
                         upper_bound = hi, 
@@ -158,24 +164,26 @@ def main():
                         target_reward = cfg['target_reward'],
                         scores_deque_length = cfg['scores_deque_length'],
                         pop_size = cfg['pop_size'])
+    
+    print("\nbest reward: \t", best_reward)
     # save file
     h.save_file(result_file_path + "/best_actions_keypoints", best_actions_keypoints)
-    h.save_file(result_file_path + "/scores", scores)
+    # h.save_file(result_file_path + "/scores", scores)
 
-    h.plot(scores)
+    h.plot(scores, result_file_path)
+    # close the environment
     env.close()
+    
     return 0
 
-
-
 def test():
-    env = Walker2DBulletEnv(render=True)
+    env = Walker2DBulletEnv(render=False)
     env.reset()
     # TODO: find action_pieces such that sum_reward is large. Use something like CEM or CMA-ES.
     # load best actions keypoints
     best_actions_keypoints = h.load_file("result/best_actions_keypoints")
     # get best action lists
-    best_actions = h.interpolation(best_actions_keypoints, interval=50)
+    best_actions = h.interpolation(best_actions_keypoints, interval=cfg['interpolate_interval'])
 
     episode_return = 0.0
     for action in best_actions:
@@ -192,8 +200,10 @@ def test():
         
 if __name__ == '__main__':
     main()
+    
     print("Testing: \n")
     test()
-    
 
+    # save video
+    show_video_of_model()
 
