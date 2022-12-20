@@ -1,0 +1,6 @@
+num_keypoints : 6 # the number of key points
+interpolate_interval : 50 # set the interpolate interval
+n_iterations : 1 # number of iterations
+target_reward : 1500 # the target reward
+scores_deque_length : 100 # the number of scores length
+pop_size : 50 # the number of population

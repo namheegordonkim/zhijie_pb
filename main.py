@@ -1,9 +1,19 @@
+import inspect
+import os
 import gym
 import pybullet_envs
 import numpy as np
 import time
 from collections import deque
 import random
+import matplotlib.pyplot as plt
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning) 
+warnings.filterwarnings("ignore", category=DeprecationWarning) 
+
+import yaml
+
+currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 
 # import mocca_envs
 from envs.envs import Walker2DBulletEnv
@@ -43,6 +53,8 @@ def cem(agent,
         upper_bound,
         lower_bound,
         interval,
+        target_reward = 500,
+        scores_deque_length = 100,
         n_iterations=500, 
         print_every=10, 
         pop_size=50, 
@@ -58,6 +70,8 @@ def cem(agent,
         upper_bound (array): the upper bound of joints radius
         lower_bound (array): the lower bound of joints radius
         interval: interpolation interval
+        target_reward : the target reward
+        scores_deque_length : 100 the number of scores length
         n_iterations (int): maximum number of training iterations
         max_t (int): maximum number of timesteps per episode
         gamma (float): discount rate
@@ -69,7 +83,7 @@ def cem(agent,
     # set the number of elite
     n_elite=int(pop_size * elite_frac)
     # scores deque
-    scores_deque = deque(maxlen=100)
+    scores_deque = deque(maxlen=scores_deque_length)
     scores = []
 
     # Initialize the sample within limitations
@@ -86,7 +100,6 @@ def cem(agent,
 
         # population shape => pop_size * num_keypoints * action_dim 
         population_keypoints = np.stack([best_sample_keypoints + sigma * np.dstack([i for i in sample_keypoint])[0] for sample_keypoint in population_keypoints])
-        
         
         # interpolate and population shape => pop_size * [(num_keypoints-1) * interval)] * action_dim
         population = np.stack([interpolation(keypoints, interval) for keypoints in population_keypoints])
@@ -114,30 +127,55 @@ def cem(agent,
         if i_iteration % print_every == 0:
             print('Episode {}\tAverage Score: {:.2f}'.format(i_iteration, np.mean(scores_deque)))
         
-        if np.mean(scores_deque)>=300.0:
+        if np.mean(scores_deque) >= target_reward:
             print('\nEnvironment solved in {:d} iterations!\tAverage Score: {:.2f}'.format(i_iteration-100, np.mean(scores_deque)))
             break
 
     return best_actions_keypoints, scores
 
-def load_arr(file_path):
-    # open the file in read binary mode
-    file = open(file_path, "rb")
-    #read the file to numpy array
-    best_actions_keypoints = np.load(file)
-    return best_actions_keypoints
+def save_file(filename, arr):
+    # open a binary file in write mode
+    file = open(filename, "wb")
+    # save array to the file
+    np.save(file, arr)
+    # close the file
+    file.close
 
+def load_file(filename):
+    # open the file in read binary mode
+    file = open(filename, "rb")
+    #read the file to numpy array
+    arr = np.load(file)
+    return arr
+
+def load_config(configFilePath):
+    with open(configFilePath, 'r') as file:
+        cfg = yaml.safe_load(file)
+    return cfg
+
+def make_dir(dir_path):
+    """Create directory if it does not already exist."""
+    try:
+        os.makedirs(dir_path)
+    except OSError:
+        pass
+    return dir_path
 
 def main():
+    # get config file
+    config_file_path = currentdir + "\\cfg\\env_cfg.yaml"
+    cfg = load_config(config_file_path)
+    print(config_file_path)
+    # set result config path
+    result_file_path = currentdir+"\\result"
+    make_dir(result_file_path) # create result folder
+
     # initialize environment
     env = Walker2DBulletEnv(render=False)
     env.reset()
 
     # pre=setting
     action_dim = env.action_space.shape[0] # get action dimension
-    num_keypoints = 7 # the number of key points
-    interpolate_interval = 50 # set the interpolate interval
-
     # agent
     agent = Agent(env)
 
@@ -145,35 +183,41 @@ def main():
     hi = np.array([j.upperLimit for j in env.ordered_joints], dtype=np.float32).flatten()
     lo = np.array([j.lowerLimit for j in env.ordered_joints], dtype=np.float32).flatten()
 
-    # number of iterations
-    n_iterations = 200
+    best_actions_keypoints, scores = cem(agent = agent, 
+                        action_dim = action_dim, 
+                        num_keypoints = cfg['num_keypoints'], 
+                        upper_bound = hi, 
+                        lower_bound = lo, 
+                        interval = cfg['interpolate_interval'], 
+                        n_iterations = cfg['n_iterations'],
+                        target_reward = cfg['target_reward'],
+                        scores_deque_length = cfg['scores_deque_length'],
+                        pop_size = cfg['pop_size'])
+    # save file
+    save_file(result_file_path + "\\best_actions_keypoints", best_actions_keypoints)
+    save_file(result_file_path + "\\scores", scores)
 
-    best_actions_keypoints, scores = cem(agent, 
-                    action_dim, 
-                    num_keypoints, 
-                    hi, 
-                    lo, 
-                    interpolate_interval, 
-                    n_iterations)
-    print(scores)
-
-    # open a binary file in write mode
-    file = open("best_actions_keypoints", "wb")
-    # save array to the file
-    np.save(file, best_actions_keypoints)
-    # close the file
-    file.close
+    plot(scores)
 
     return 0
-   
+
+
+def plot(scores):
+    # plot the scores
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    plt.plot(np.arange(1, len(scores)+1), scores)
+    plt.ylabel('Score')
+    plt.xlabel('Episode #')
+    plt.show()
+
 
 def test():
     env = Walker2DBulletEnv(render=True)
     env.reset()
-     # TODO: find action_pieces such that sum_reward is large. Use something like CEM or CMA-ES.
-    sum_reward = 0
+    # TODO: find action_pieces such that sum_reward is large. Use something like CEM or CMA-ES.
     # load best actions keypoints
-    best_actions_keypoints = load_arr("best_actions_keypoints")
+    best_actions_keypoints = load_file("best_actions_keypoints")
     # get best action lists
     best_actions = interpolation(best_actions_keypoints, interval=50)
 
@@ -191,7 +235,6 @@ def test():
         
 if __name__ == '__main__':
     main()
-
     # print("Testing: \n")
     # test()
     

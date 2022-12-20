@@ -1,0 +1,3 @@
+config_name: lunarlander_discrete_medium
+num_keypoints: 7
+interpolate_interval: 50

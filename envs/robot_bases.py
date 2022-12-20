@@ -9,7 +9,9 @@ import pybullet
 
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 parentdir = os.path.dirname(currentdir)
+
 os.sys.path.insert(0, parentdir)
+
 import pybullet_data
 
 
@@ -132,8 +134,7 @@ class MJCFBasedRobot(XmlBasedRobot):
       self.ordered_joints = []
       self.doneLoading = 1
       if self.self_collision:
-        self.objects = self._p.loadMJCF(os.path.join("envs", "mjcf",
-                                                     self.model_xml),
+        self.objects = self._p.loadMJCF(os.path.join("envs", "mjcf", self.model_xml),
                                         flags=pybullet.URDF_USE_SELF_COLLISION |
                                         pybullet.URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS |
                                         pybullet.URDF_GOOGLEY_UNDEFINED_COLORS )
