@@ -62,27 +62,32 @@ class  WalkerBaseBulletEnv(MJCFBaseBulletEnv):
   joints_at_limit_cost = -0.1  # discourage stuck joints
 
   def step(self, a):
-    kp = 200
-    kd = 100
-    
-    j = np.array([j.current_relative_position() for j in self.ordered_joints],
-                 dtype=np.float32).flatten()
+    j = np.array([j.current_position() for j in self.ordered_joints],
+                     dtype=np.float32).flatten()
+    lo = np.array([j.lowerLimit for j in self.ordered_joints],
+                     dtype=np.float32).flatten()
+    hi = np.array([j.upperLimit for j in self.ordered_joints],
+                     dtype=np.float32).flatten()
+
     # even elements [0::2] position, scaled to -1..+1 between limits
     # odd elements  [1::2] angular speed, scaled to show -1..+1
-    angles = j[0::2]
-    speed = j[1::2]
-    print(f"{angles=}")
-    print(f"{speed=}")
-    # a is the target state
-    torque = kp*(a - angles) + kd*(0 - speed)  # based on a
-    # torque = np.clip(torque, -1, +1)
+    angs = j[0::2]
+    vels = j[1::2]
+    kp = 1e1
+    kd = 1e0
+    target_angs = a * np.pi
+    # target_angs = a * (hi - lo) / 2 + (hi + lo) / 2
+    # target_angs = np.zeros_like(a)
+    # target_angs[a > 0] = hi[a > 0] * a[a > 0]
+    # target_angs[a < 0] = -lo[a < 0] * a[a < 0]
+    torque = kp * (target_angs - angs) + kd * (0 - vels)
 
     if not self.scene.multiplayer:  # if multiplayer, action first applied to all robots, then global step() called, then _step() for all robots with the same actions
       # set torque for each motor corresponding to a
       for i in range(1):
         self.robot.apply_action(torque)
         self.scene.global_step()
-        print(torque)
+        #print(torque)
     # state is obtained by calling self.robot.calc_state(), the method of another class. 
     state = self.robot.calc_state()  # also calculates self.joints_at_limit
 
