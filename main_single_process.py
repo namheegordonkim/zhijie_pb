@@ -19,10 +19,8 @@ from envs.envs import Walker2DBulletEnv
 
 
 class Agent():
-    def __init__(self, env, envs, cfg):
+    def __init__(self, env):
         self.env = env
-        self.envs = envs
-        self.cfg = cfg
 
     def evaluate(self, actions):
         _ = self.env.reset()
@@ -33,24 +31,6 @@ class Agent():
             episode_return += reward 
             if done:
                 break
-
-        return episode_return
-
-    def evaluate_parallel(self, actions):
-        _ = self.envs.reset()
-        
-        episode_return = np.zeros(self.cfg['pop_size'])
-        dones_flag = np.zeros(self.cfg['pop_size'], dtype=bool)
-        for action in actions:
-            _, rewards, dones, _ = self.envs.step(action)
-
-            # if all env failed, then break
-            if sum(~dones_flag) == 0:
-                break
-
-            dones_flag += dones
-            # calculate reward
-            episode_return += np.multiply(rewards, ~dones_flag)
 
         return episode_return
 
@@ -92,18 +72,23 @@ def cem(agent,
 
     # set the number of elite
     n_elite = int(pop_size * elite_frac)
-     
+    
     # set variable store scores
     scores_deque = deque(maxlen=scores_deque_length)
     scores = []
 
     # Initialize the sample within bounds
-    best_sample_keypoints = np.array(
-        [np.random.uniform(lower_bound[i], upper_bound[i], num_keypoints) for i in range(action_dim)]
+    best_actions_keypoints_path = currentdir + "/result/best_actions_keypoints"
+    file_exist = os.path.exists(best_actions_keypoints_path)
+    # if file_exist:
+    if False:
+        best_sample_keypoints = h.load_file(best_actions_keypoints_path)
+    else:
+        best_sample_keypoints = np.array(
+            [np.random.uniform(lower_bound[i], upper_bound[i], num_keypoints) for i in range(action_dim)]
         )
-
-    # dim = num_keypoints x action_dim
-    best_sample_keypoints = np.dstack(best_sample_keypoints)[0]
+        # dim = num_keypoints x action_dim
+        best_sample_keypoints = np.dstack(best_sample_keypoints)[0]
 
     # Return variables
     # create variable to store best reward and best action keypoints as return
@@ -112,38 +97,44 @@ def cem(agent,
     
     for i_iteration in range(1, n_iterations+1):
         # generate the population
-        # population_keypoints shape => num_keypoints * pop_size * action_dim 
-        population_keypoints  = np.array(
-            # Add fluctuation to best keypoints and generate population
-            [[best_sample_keypoints[j] + sigma * np.random.randn(action_dim) for i in range(pop_size)] for j in range(num_keypoints)]
+        # fluctuations shape => pop_size * num_keypoints * action_dim 
+        fluctuations  = np.array(
+            [np.array([np.random.randn(action_dim) for i in range(num_keypoints)]) for j in range(pop_size)]
             )
 
-        # interpolation => shape => [(num_keypoints-1)*interval] * pop_size * action_dim
-        population = h.interpolation(population_keypoints, interval)
+        # Add fluctuation to best keypoints and generate population
+        # population shape => pop_size * num_keypoints * action_dim 
+        population_keypoints = np.array(
+            [best_sample_keypoints + sigma * fluctuation for fluctuation in fluctuations]
+            )
+
+        # interpolation; population shape => pop_size * [(num_keypoints-1) * interval)] * action_dim
+        population = np.stack([h.interpolation(keypoints, interval) for keypoints in population_keypoints])
 
         # evaluate population
-        rewards = agent.evaluate_parallel(population)
-        
+        rewards = np.array(
+            [agent.evaluate(sample) for sample in population]
+            )
+
         # Select n_elite best candidates from collected rewards
         elite_idxs = rewards.argsort()[-n_elite:]
-        
+
         # Select n_elite best elite keypoints according to elite index; 
-        elite_samples_keypoints = population_keypoints[:,elite_idxs,:] # elite_idxs is in the ascending order
+        elite_samples_keypoints = population_keypoints[elite_idxs] # elite_idxs is in the ascending order
 
         # cal elite keypoints mean to get the best keypoints
-        best_sample_keypoints = np.array(elite_samples_keypoints).mean(axis=1)
-        
-        # evluate the mean keypoints
+        best_sample_keypoints = np.array(elite_samples_keypoints).mean(axis=0)
+
+        # evluate the keypoints
         reward = agent.evaluate(h.interpolation(best_sample_keypoints, interval))
-        
         scores_deque.append(reward)
         scores.append(reward)     
 
         # get best action
         if max(rewards) > best_reward:
             best_reward = max(rewards)
-            # save the largest reward keypoints
-            best_actions_keypoints = elite_samples_keypoints[:,-1,:]
+            best_actions_keypoints = elite_samples_keypoints[-1]
+            # save file
             h.save_file(result_file_path + "/best_actions_keypoints", best_actions_keypoints)
 
         if i_iteration % print_every == 0:
@@ -154,7 +145,6 @@ def cem(agent,
             break
 
     return best_actions_keypoints, best_reward, scores
-
 #------------------------------- Get configuration -----------------------------------------------#
 
 # Get current dir
@@ -162,8 +152,7 @@ currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentfram
 # Get config path
 config_file_path = currentdir + "/cfg/env_cfg.yaml"
 # set result path
-result_file_path = currentdir + "/result"
-
+result_file_path = currentdir+"/result"
 # Load config file
 cfg = h.load_config(config_file_path)
 
@@ -172,27 +161,20 @@ def main():
     # run_id = int(time.time())
     h.make_dir(result_file_path) # create result folder
 
-    # need to modify later
+    # initialize multiple environment
     env = Walker2DBulletEnv(render=False)
     env.reset()
 
-    # initialize multiple(pop_size) environments
-    envs = gym.vector.AsyncVectorEnv(
-        [lambda: Walker2DBulletEnv(render=False)] * cfg['pop_size'],
-        shared_memory=True
-        )
-    envs.reset()
-    
     print(cfg)
     # pre-setting
-    action_dim = envs.single_action_space.shape[0] # get action dimension
+    action_dim = env.action_space.shape[0] # get action dimension
     # initialize agent
-    agent = Agent(env, envs, cfg)
-
+    agent = Agent(env)
+    
     # get the bound of joints radius
     hi = np.array([j.upperLimit for j in env.ordered_joints], dtype=np.float32).flatten()
     lo = np.array([j.lowerLimit for j in env.ordered_joints], dtype=np.float32).flatten()
-    
+
     # train the model using cem 
     best_actions_keypoints, best_reward, scores = cem(
                         agent = agent, 
@@ -208,15 +190,15 @@ def main():
                         elite_frac = cfg['elite_frac']
                         )
 
-    print("\nBest reward: \t", best_reward)
+    print("\nbest reward: \t", best_reward)
 
     # save file
     h.save_file(result_file_path + "/best_actions_keypoints", best_actions_keypoints)
+    # h.save_file(result_file_path + "/scores", scores)
 
     h.plot(scores, result_file_path)
     # close the environment
     env.close()
-    envs.close()
     
     return 0
 
@@ -227,7 +209,7 @@ def test():
     # load best actions keypoints
     best_actions_keypoints = h.load_file("result/best_actions_keypoints")
     # get best action lists
-    best_actions = h.interpolation(best_actions_keypoints, interval = cfg['interpolate_interval'])
+    best_actions = h.interpolation(best_actions_keypoints, interval=cfg['interpolate_interval'])
 
     episode_return = 0.0
     for action in best_actions:
@@ -239,20 +221,22 @@ def test():
         if done:
             break
 
-    print("Episode return:", episode_return)
+    print("episode_return:", episode_return)
     env.close()
         
 if __name__ == '__main__':
     start = time.time()
 
-    main()
+    # main()
 
     end = time.time()
-    print("\nThe time of execution of main multiple process program is :",
+    print("\nThe time of execution of main single process program is :",
       (end-start) * 10**3, "ms\n")
-
+      
     # save video
     show_video_of_model()
-    
+
     #print("Testing: \n")
     # test()
+
+    

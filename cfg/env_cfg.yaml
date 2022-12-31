@@ -1,6 +1,7 @@
-num_keypoints : 10 # the number of key points
+num_keypoints : 6 # the number of key points
 interpolate_interval : 100 # set the interpolate interval
 n_iterations : 2000 # number of iterations
 target_reward : 1000 # the target reward
 scores_deque_length : 100 # the number of scores length
 pop_size : 100 # the number of population
+elite_frac : 0.1 # the percentage of elite; # of elite = elite_frac * pop_size
