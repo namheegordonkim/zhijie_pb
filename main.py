@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning) 
 warnings.filterwarnings("ignore", category=DeprecationWarning) 
+from omegaconf import DictConfig, OmegaConf
 
 import common.helper as h
 from record_animation import show_video_of_model
@@ -183,7 +184,9 @@ def main():
         )
     envs.reset()
     
-    print(cfg)
+    # print cfg
+    print("#"*19 + " Config " + "#"*19)
+    print(OmegaConf.to_yaml(cfg))
     # pre-setting
     action_dim = envs.single_action_space.shape[0] # get action dimension
     # initialize agent

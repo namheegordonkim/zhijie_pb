@@ -11,6 +11,8 @@ import warnings
 warnings.filterwarnings("ignore", category=UserWarning) 
 warnings.filterwarnings("ignore", category=DeprecationWarning) 
 
+from omegaconf import DictConfig, OmegaConf
+
 import common.helper as h
 from record_animation import show_video_of_model
 
@@ -165,7 +167,10 @@ def main():
     env = Walker2DBulletEnv(render=False)
     env.reset()
 
-    print(cfg)
+    # print cfg
+    print("#"*19 + " Config " + "#"*19)
+    print(OmegaConf.to_yaml(cfg))
+
     # pre-setting
     action_dim = env.action_space.shape[0] # get action dimension
     # initialize agent
@@ -227,7 +232,7 @@ def test():
 if __name__ == '__main__':
     start = time.time()
 
-    # main()
+    main()
 
     end = time.time()
     print("\nThe time of execution of main single process program is :",
