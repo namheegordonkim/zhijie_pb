@@ -10,7 +10,7 @@ from envs.envs import Walker2DBulletEnv
 
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 
-def show_video_of_model(render=Flase):
+def show_video_of_model(render=False):
     # initialize environment
     env = Walker2DBulletEnv(render=render)
 
