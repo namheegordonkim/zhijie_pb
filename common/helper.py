@@ -51,3 +51,9 @@ def plot(scores, path):
     plt.xlabel('Episode #')
     plt.savefig(path + '/scores.png')
     plt.close(fig)
+
+
+def clamp(array, lower_bound, upper_bound):
+    for index in range(len(array)):
+        array[index] = max(min(array[index], upper_bound[index]), lower_bound[index])
+    return array

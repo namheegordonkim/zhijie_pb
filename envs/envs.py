@@ -64,10 +64,11 @@ class  WalkerBaseBulletEnv(MJCFBaseBulletEnv):
   def step(self, a):
     j = np.array([j.current_position() for j in self.ordered_joints],
                      dtype=np.float32).flatten()
-    lo = np.array([j.lowerLimit for j in self.ordered_joints],
-                     dtype=np.float32).flatten()
-    hi = np.array([j.upperLimit for j in self.ordered_joints],
-                     dtype=np.float32).flatten()
+
+    # lo = np.array([j.lowerLimit for j in self.ordered_joints],
+    #                  dtype=np.float32).flatten()
+    # hi = np.array([j.upperLimit for j in self.ordered_joints],
+    #                  dtype=np.float32).flatten()
 
     # even elements [0::2] position, scaled to -1..+1 between limits
     # odd elements  [1::2] angular speed, scaled to show -1..+1
@@ -76,10 +77,12 @@ class  WalkerBaseBulletEnv(MJCFBaseBulletEnv):
     kp = 1e1
     kd = 1e0
     target_angs = a * np.pi
+    
     # target_angs = a * (hi - lo) / 2 + (hi + lo) / 2
     # target_angs = np.zeros_like(a)
     # target_angs[a > 0] = hi[a > 0] * a[a > 0]
     # target_angs[a < 0] = -lo[a < 0] * a[a < 0]
+
     torque = kp * (target_angs - angs) + kd * (0 - vels)
 
     if not self.scene.multiplayer:  # if multiplayer, action first applied to all robots, then global step() called, then _step() for all robots with the same actions

@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning) 
 warnings.filterwarnings("ignore", category=DeprecationWarning) 
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import OmegaConf
 
 import common.helper as h
 from record_animation import show_video_of_model
@@ -116,7 +116,10 @@ def cem(agent,
         # population_keypoints shape => num_keypoints * pop_size * action_dim 
         population_keypoints  = np.array(
             # Add fluctuation to best keypoints and generate population
-            [[best_sample_keypoints[j] + sigma * np.random.randn(action_dim) for i in range(pop_size)] for j in range(num_keypoints)]
+            # clamp function -> make sure the angle in the right range
+            [
+                [h.clamp(best_sample_keypoints[j] + sigma * np.random.randn(action_dim), lower_bound, upper_bound) for _ in range(pop_size)]
+                                                                                    for j in range(num_keypoints)]
             )
 
         # interpolation => shape => [(num_keypoints-1)*interval] * pop_size * action_dim

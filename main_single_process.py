@@ -101,14 +101,18 @@ def cem(agent,
         # generate the population
         # fluctuations shape => pop_size * num_keypoints * action_dim 
         fluctuations  = np.array(
-            [np.array([np.random.randn(action_dim) for i in range(num_keypoints)]) for j in range(pop_size)]
+            [np.array([np.random.randn(action_dim) for i in range(num_keypoints)]) 
+                                            for j in range(pop_size)]
             )
 
         # Add fluctuation to best keypoints and generate population
         # population shape => pop_size * num_keypoints * action_dim 
         population_keypoints = np.array(
-            [best_sample_keypoints + sigma * fluctuation for fluctuation in fluctuations]
+            [
+                [h.clamp(best_sample_keypoints[i] + sigma * fluctuation[i], lower_bound, upper_bound) for i in range(num_keypoints)] 
+                                                for fluctuation in fluctuations]
             )
+
 
         # interpolation; population shape => pop_size * [(num_keypoints-1) * interval)] * action_dim
         population = np.stack([h.interpolation(keypoints, interval) for keypoints in population_keypoints])
