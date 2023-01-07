@@ -7,8 +7,11 @@ from envs.scene_stadium import SinglePlayerStadiumScene
 
 class  WalkerBaseBulletEnv(MJCFBaseBulletEnv):
 
-  def __init__(self, robot, render=False):
+  def __init__(self, robot, render=False, **kwargs):
     # print("WalkerBase::__init__ start")
+    # The direction of walking
+    self.direction = kwargs.pop('direction', 'forward')
+   
     self.camera_x = 0
     self.walk_target_x = 1e3  # kilometer away
     self.walk_target_y = 0
@@ -108,6 +111,9 @@ class  WalkerBaseBulletEnv(MJCFBaseBulletEnv):
     self.potential = self.robot.calc_potential()
     progress = float(self.potential - potential_old)
 
+    if self.direction == "backward":
+      progress = -progress
+
     feet_collision_cost = 0.0
     for i, f in enumerate(
         self.robot.feet
@@ -126,6 +132,7 @@ class  WalkerBaseBulletEnv(MJCFBaseBulletEnv):
     electricity_cost += self.stall_torque_cost * float(np.square(a).mean())
 
     joints_at_limit_cost = float(self.joints_at_limit_cost * self.robot.joints_at_limit)
+
     debugmode = 0
     if (debugmode):
       print("alive=")
@@ -148,6 +155,7 @@ class  WalkerBaseBulletEnv(MJCFBaseBulletEnv):
       print("sum rewards")
       print(sum(self.rewards))
     self.HUD(state, a, done)
+    
     self.reward += sum(self.rewards)
 
     return state, sum(self.rewards), bool(done), {}
@@ -169,9 +177,9 @@ class HopperBulletEnv(WalkerBaseBulletEnv):
 # Its parent class WalkerBaseBulletEnv does have a step method:
 class Walker2DBulletEnv(WalkerBaseBulletEnv):
 
-  def __init__(self, render=False):
+  def __init__(self, render=False, **kwargs):
     self.robot = Walker2D()
-    WalkerBaseBulletEnv.__init__(self, self.robot, render)
+    WalkerBaseBulletEnv.__init__(self, self.robot, render, **kwargs)
 
 
 class HalfCheetahBulletEnv(WalkerBaseBulletEnv):
