@@ -3,7 +3,7 @@
 ### Installation
 
 ```bash
-pip install -r requirements.txt.
+pip install -r requirements.txt
 ```
 
 ### Running the project
@@ -11,12 +11,12 @@ pip install -r requirements.txt.
 usage: `main.py [-h] [--wandb] [-d {forward,backward}] [--iter ITER] [--pop_size POP_SIZE] [--num_keypoints NUM_KEYPOINTS]`
 
 optional arguments to the `main` script are:
-* -h, --help            show this help message and exit
-* --wandb               Open wandb
-* -d {forward,backward}, --direction {forward,backward} Decide direction
-* --iter ITER           The number of iterations
-* --pop_size POP_SIZE   The size of population
-* --num_keypoints NUM_KEYPOINTS The number of keypoints
+* -h, --help            Show this help message and exit
+* --wandb               Enable wandb
+* -d / --direction {forward,backward} Decide direction
+* --iter            The number of iterations
+* --pop_size    The size of population
+* --num_keypoints  The number of keypoints
 
 Example:
 

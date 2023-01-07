@@ -75,20 +75,8 @@ def cem(agent,
     Params
     ======
         Agent (object): agent instance
-        action_dim (int): the number of action dimension
-        num_keypoints (int): the number of keypoints
-        upper_bound (array): the upper bound of joints radius
-        lower_bound (array): the lower bound of joints radius
-        interval: interpolation interval
-        target_reward : the target reward
-        scores_deque_length : 100 the number of scores length
-        n_iterations (int): maximum number of training iterations
-        max_t (int): maximum number of timesteps per episode
-        gamma (float): discount rate
+        cfg (dict): the configuration dict
         print_every (int): how often to print average score (over last 100 episodes)
-        pop_size (int): size of population at each iteration
-        elite_frac (float): percentage of top performers to use in update
-        sigma (float): standard deviation of additive noise
     """
 
     # set the number of elite
@@ -157,9 +145,8 @@ def cem(agent,
             # save the largest reward keypoints
             best_actions_keypoints = elite_samples_keypoints[:,-1,:]
 
-            if i_iteration >= cfg['save_model']:
-                h.save_file(os.path.join(cfg['result_file_path'], "best_actions_keypoints"), best_actions_keypoints)
-                print('*Episode {}\t Best score: {:.2f}, model saved!'.format(i_iteration, best_reward))
+            h.save_file(os.path.join(cfg['result_file_path'], "best_actions_keypoints"), best_actions_keypoints)
+            print('*Episode {}\t Best score: {:.2f}, model saved!'.format(i_iteration, best_reward))
         
         if cfg["wandb"]:
             wandb.log({
@@ -201,8 +188,6 @@ def main(cfg):
     
     # plot scores
     h.plot(scores, cfg['result_file_path'])
-    # save file
-    h.save_file(os.path.join(cfg['result_file_path'], "best_actions_keypoints"), best_actions_keypoints)
 
     # close the environment
     env.close()
@@ -210,8 +195,6 @@ def main(cfg):
 
     return best_reward
 
-
-        
 if __name__ == '__main__':
     ap = argparse.ArgumentParser()
     ap.add_argument("--wandb", required=False, help="Open wandb", action='store_true')
@@ -271,10 +254,9 @@ if __name__ == '__main__':
     running_time = str(datetime.timedelta(seconds=seconds))
 
     print('\nThe time of execution of main multiple process program is: ', running_time)
-    # print('\nThe time of execution of main multiple process program is {:.3f} seconds.'.format(running_time))
-    
+
     # save video
-    # show_video_of_model(False, cfg)
+    show_video_of_model(False, cfg)
 
     if cfg['wandb']:
         # add wandb table
