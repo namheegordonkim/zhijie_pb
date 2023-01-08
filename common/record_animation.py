@@ -1,7 +1,5 @@
-import gym
 import os
 import inspect
-import time
 # For visualization
 from gym.wrappers.monitoring import video_recorder
 import common.helper as h
