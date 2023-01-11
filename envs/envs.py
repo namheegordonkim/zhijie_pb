@@ -113,6 +113,8 @@ class  WalkerBaseBulletEnv(MJCFBaseBulletEnv):
 
     if self.direction == "backward":
       progress = -progress
+    else:
+      pass
 
     feet_collision_cost = 0.0
     for i, f in enumerate(

@@ -29,7 +29,8 @@ def cem(agent,
 
     # Initialize the sample within bounds
     best_sample_keypoints = np.array(
-        [np.random.uniform(lower_bound[i], upper_bound[i], cfg['num_keypoints']) for i in range(agent.action_dim)]
+        # [np.random.uniform(lower_bound[i], upper_bound[i], cfg['num_keypoints']) for i in range(agent.action_dim)]
+        [np.random.randn(cfg['num_keypoints']) for _ in range(agent.action_dim)]
         )
     
     # dim = num_keypoints x action_dim
@@ -48,7 +49,7 @@ def cem(agent,
             # Add fluctuation to best keypoints and generate population
             # clamp function -> make sure the angle in the right range
             [
-                [h.clamp(best_sample_keypoints[j] + N[j][i], lower_bound, upper_bound) for i in range(cfg['pop_size'])]
+                [np.sin(best_sample_keypoints[j] + N[j][i]) for i in range(cfg['pop_size'])]
                                                                                     for j in range(cfg['num_keypoints'])]
             )
 

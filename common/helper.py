@@ -58,3 +58,20 @@ def clamp(array, lower_bound, upper_bound):
     for index in range(len(array)):
         array[index] = max(min(array[index], upper_bound[index]), lower_bound[index])
     return array
+
+
+def beautify_time(running_time):
+    running_time = running_time.split(",")
+    if len(running_time) == 2:
+        day = running_time[0].split(" ")[0] + "d"
+    
+    clock = running_time[-1].split(":")
+    hour = clock[0] + "h " if int(clock[0])!=0 else ""
+    minute = clock[1] +"m " if int(clock[1])!=0 else ""
+    second = clock[2].split(".")[0] + "s" if int(clock[2].split(".")[0])!=0 else ""
+
+    if 'day' in locals():
+        running_time = day + hour + minute + second
+    else:
+        running_time = hour + minute + second
+    return running_time

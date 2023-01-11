@@ -13,6 +13,7 @@ usage: `main.py [-h] [--wandb] [-d {forward,backward}] [--iter ITER] [--pop_size
 optional arguments to the `main` script are:
 * -h, --help            Show this help message and exit
 * --wandb               Enable wandb
+* --algo {CEM,CMA-ES}   Choose the algorithm, default CMA-ES
 * -d / --direction {forward,backward} Decide direction
 * --iter            The number of iterations
 * --pop_size    The size of population
@@ -21,7 +22,7 @@ optional arguments to the `main` script are:
 Example:
 
 ```bash
-python main.py --wandb -d backward --iter 2000 --pop_size 50 --num_keypoints 6
+python main.py --algo CMA-ES --wandb -d backward --iter 2000 --pop_size 50 --num_keypoints 6
 ```
 
 
@@ -31,4 +32,4 @@ pls check this method: https://deepakjogi.medium.com/how-to-install-pybullet-phy
 
 ### CEM
 Here I first implement cross entropy method and in order to avoid curse of dimensionality, reduce the dimensionality by selecting few number of keypoints, and then interpolate using spline-based methods.
-
+### CMA-ES

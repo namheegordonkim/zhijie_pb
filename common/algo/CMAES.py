@@ -11,22 +11,23 @@ def cma_es(agent, cfg, print_every=10):
     # get keypoints shape
     keypoints_shape = (cfg['num_keypoints'], agent.action_dim)
     # get action dim
-    action_bounds = [*zip(agent.env.action_space.low, agent.env.action_space.high)]
+    # action_bounds = [*zip(agent.env.action_space.low, agent.env.action_space.high)]
 
     optimizer = CMA(
                     mean = np.array([0.0] * np.prod(keypoints_shape)), 
-                    bounds = np.array(action_bounds * cfg['num_keypoints']), 
-                    sigma = 0.5, 
-                    n_max_resampling = 1,
+                    #bounds = np.array(action_bounds * cfg['num_keypoints']), 
+                    sigma = 2, 
+                    #n_max_resampling = 1,
                     population_size = cfg['pop_size']
                 )
 
     scores_deque = deque(maxlen = optimizer.population_size)
     best_reward = 0
-    for i_iteration in range(cfg['n_iterations']):
+    for i_iteration in range(1, cfg['n_iterations']+1):
         solutions = []
         for _ in range(optimizer.population_size):
-            keypoints = optimizer.ask()
+            # here use np.sin() function
+            keypoints = np.sin(optimizer.ask())
             actions =  h.interpolation(keypoints.reshape(keypoints_shape), cfg['interpolate_interval'])
             score = -agent.evaluate(actions)
 
@@ -51,3 +52,5 @@ def cma_es(agent, cfg, print_every=10):
         
     return -best_reward
 
+if __name__ == '__main__':
+    cma_es(None, None)

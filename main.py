@@ -1,8 +1,7 @@
 import os, inspect
-import pybullet_envs, gym
+
 import numpy as np
 import time, datetime
-
 import argparse
 from omegaconf import OmegaConf
 import wandb
@@ -13,8 +12,10 @@ from common.algo.CMAES import cma_es
 from common.algo.CEM import cem
 from common.Agent import Agent
 
+import gym
 # import mocca_envs
 from envs.envs import Walker2DBulletEnv
+
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning) 
 warnings.filterwarnings("ignore", category=DeprecationWarning) 
@@ -23,7 +24,6 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 
 def main(cfg):
-    
     h.make_dir(cfg['result_file_path']) # create result folder
     env = Walker2DBulletEnv(render=False, direction = cfg['direction'])# need to modify later
     # initialize multiple(pop_size) environments
@@ -61,20 +61,23 @@ if __name__ == '__main__':
                         help="Decide direction")
     ap.add_argument("--iter", type=int, required=False,
                     help="The number of iterations")      
+    ap.add_argument("--interval", type=int, required=False,
+                    help="The interpolation interval")      
     ap.add_argument("--pop_size", type=int, required=False,
                     help="The size of population ")           
     ap.add_argument("--num_keypoints", type=int, required=False,
                     help="The number of keypoints ")   
 
-    args = vars(ap.parse_args())
-
+    args = vars(ap.parse_args()) # dict type
+    # args = ap.parse_args() Namespace type
+    
     #------------------------------- Get configuration -----------------------------------------------#
     # Get config path
     config_file_path = os.path.join(currentdir ,"cfg/env_cfg.yaml")
     # Load config file
     cfg = h.load_config(config_file_path)
 
-    # update cfg
+    # Override config if passed on the command line
     if args['wandb']:
         cfg['wandb'] = True
     if args['direction'] is not None:
@@ -87,6 +90,8 @@ if __name__ == '__main__':
         cfg['num_keypoints'] = args['num_keypoints']
     if args['algo'] is not None:
         cfg['algo'] = args['algo']
+    if args['interval'] is not None:
+        cfg['interpolate_interval'] = args['interval']
 
     # set result path
     cfg['result_file_path'] = os.path.join(currentdir, "result", cfg['env_name'], cfg['direction'])
@@ -113,24 +118,31 @@ if __name__ == '__main__':
     seconds = time.time() - start
 
     running_time = str(datetime.timedelta(seconds=seconds))
-    print('\nThe time of execution of main multiple process program is: ', running_time)
+    # 3d 10h 6m 3s
+    running_time = h.beautify_time(running_time)
 
+    print('\nThe time of execution of main multiple process program is: ', running_time)
+    
     # save video
     show_video_of_model(False, cfg)
-
+    
     # keep data to wandb
     if cfg['wandb']:
-        # add wandb table
-        columns = list(cfg.keys()) + ['best_reward', 'running_time']
-        table = wandb.Table(columns=columns)
-        record = list(cfg.values()) + [best_reward, running_time]
-
-        table.add_data(*record)
-        wandb.log({"result_table":table}, commit=False)
-
         # Log the video 
         video_name = cfg['env_name'] + "_" + cfg['direction']
         path_to_video = os.path.join(cfg['result_file_path'], "video", "{}.mp4".format(video_name))
-        wandb.log({"video": wandb.Video(path_to_video, fps=4, format="mp4", caption = video_name)})
+        #wandb.log({"video": wandb.Video(path_to_video, fps=4, format="mp4", caption = video_name)})
+        # remove 
+        cfg.pop("wandb")
+        cfg.pop("result_file_path")
+        if cfg["algo"] == "CMA-ES":
+            cfg.pop("elite_frac")
+        # add wandb table
+        columns = list(cfg.keys()) + ['video', 'best_reward',  'running_time']
+        table = wandb.Table(columns=columns)
+        record = list(cfg.values()) + [wandb.Video(path_to_video, fps=4, format="mp4", caption = video_name), best_reward,  running_time]
+
+        table.add_data(*record)
+        wandb.log({"result_table":table}, commit=False)
 
         wandb.finish()
