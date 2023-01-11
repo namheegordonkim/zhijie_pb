@@ -145,4 +145,5 @@ if __name__ == '__main__':
         table.add_data(*record)
         wandb.log({"result_table":table}, commit=False)
 
+        # close wandb
         wandb.finish()

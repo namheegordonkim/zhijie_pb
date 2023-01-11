@@ -67,8 +67,8 @@ def beautify_time(running_time):
     
     clock = running_time[-1].split(":")
     hour = clock[0] + "h " if int(clock[0])!=0 else ""
-    minute = clock[1] +"m " if int(clock[1])!=0 else ""
-    second = clock[2].split(".")[0] + "s" if int(clock[2].split(".")[0])!=0 else ""
+    minute = str(int(clock[1])) +"m " if int(clock[1])!=0 else ""
+    second = str(int(clock[2].split(".")[0])) + "s" if int(clock[2].split(".")[0])!=0 else ""
 
     if 'day' in locals():
         running_time = day + hour + minute + second

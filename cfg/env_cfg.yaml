@@ -6,4 +6,4 @@ interpolate_interval : 20 # set the interpolate interval
 n_iterations : 2000 # number of iterations
 pop_size : 16 # the number of population
 elite_frac : 0.1 # the percentage of elite; # of elite = elite_frac * pop_size
-wandb : False # if use wandb
+wandb : False # if use wandb, default false

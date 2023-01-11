@@ -32,4 +32,6 @@ pls check this method: https://deepakjogi.medium.com/how-to-install-pybullet-phy
 
 ### CEM
 Here I first implement cross entropy method and in order to avoid curse of dimensionality, reduce the dimensionality by selecting few number of keypoints, and then interpolate using spline-based methods.
+
 ### CMA-ES
+
