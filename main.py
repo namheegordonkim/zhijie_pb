@@ -26,7 +26,6 @@ currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentfram
 
 
 def main(cfg):
-    h.make_dir(cfg['result_file_path'])  # create result folder
     env = Walker2DBulletEnv(render=False, direction=cfg['direction'])  # need to modify later
     # initialize multiple(pop_size) environments
     envs = gym.vector.AsyncVectorEnv(
@@ -54,33 +53,20 @@ def main(cfg):
 
     return best_reward
 
+def parse_opt():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--wandb", required=False, help="Open wandb", action='store_true')
+    parser.add_argument("--algo", type=str, required=False, choices=['CEM', 'CMA-ES'], help="Choose the algorithm")
+    parser.add_argument("-d", "--direction", type=str, required=False, choices=['forward', 'backward'], help="Decide direction")
+    parser.add_argument("--iter", type=int, required=False, help="The number of iterations")
+    parser.add_argument("--interval", type=int, required=False, help="The interpolation interval")
+    parser.add_argument("--pop_size", type=int, required=False, help="The size of population ")
+    parser.add_argument("--num_keypoints", type=int, required=False, help="The number of keypoints ")
+    opt = parser.parse_args()
+    return opt
 
-if __name__ == '__main__':
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--wandb", required=False, help="Open wandb", action='store_true')
-    ap.add_argument("--algo", type=str, required=False, choices=['CEM', 'CMA-ES'],
-                    help="Choose the algorithm")
-    ap.add_argument("-d", "--direction", type=str, required=False, choices=['forward', 'backward'],
-                    help="Decide direction")
-    ap.add_argument("--iter", type=int, required=False,
-                    help="The number of iterations")
-    ap.add_argument("--interval", type=int, required=False,
-                    help="The interpolation interval")
-    ap.add_argument("--pop_size", type=int, required=False,
-                    help="The size of population ")
-    ap.add_argument("--num_keypoints", type=int, required=False,
-                    help="The number of keypoints ")
-
-    args = vars(ap.parse_args())  # dict type
-    # args = ap.parse_args() Namespace type
-
-    # ------------------------------- Get configuration -----------------------------------------------#
-    # Get config path
-    config_file_path = os.path.join(currentdir, "cfg/env_cfg.yaml")
-    # Load config file
-    cfg = h.load_config(config_file_path)
-
-    # Override config if passed on the command line
+def override_cfg(args, cfg):
+     # Override config if passed on the command line
     if args['wandb']:
         cfg['wandb'] = True
     if args['direction'] is not None:
@@ -98,7 +84,19 @@ if __name__ == '__main__':
 
     # set result path
     cfg['result_file_path'] = os.path.join(currentdir, "result", cfg['env_name'], cfg['direction'])
+    return cfg
 
+if __name__ == '__main__':
+    opt = parse_opt()
+    args = vars(opt)  
+    # ------------------------------- Get configuration -----------------------------------------------#
+    # Get config path
+    config_file_path = os.path.join(currentdir, "cfg/env_cfg.yaml")
+    # Load config file
+    cfg = h.load_config(config_file_path)
+    override_cfg(args, cfg)
+    # create result folder
+    h.make_dir(cfg['result_file_path']) 
     # get time
     time_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     # set run name
@@ -120,10 +118,7 @@ if __name__ == '__main__':
     best_reward = main(cfg)
     seconds = time.time() - start
 
-    running_time = str(datetime.timedelta(seconds=seconds))
-    # 3d 10h 6m 3s
-    running_time = h.beautify_time(running_time)
-
+    running_time = h.beautify_time(str(datetime.timedelta(seconds=seconds)))
     print('\nThe time of execution of main multiple process program is: ', running_time)
 
     # save video
